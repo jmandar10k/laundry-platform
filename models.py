@@ -472,6 +472,7 @@ def generate_order_slip_pdf(order):
     pdf.cell(0, 5, f"Outlet: {order['outlet_name']}", ln=True)
     pdf.ln(2)
 
+    pdf.set_font("Helvetica", "", 9)
     pdf.cell(0, 5, f"Service: {order['service_type']}", ln=True)
     pdf.cell(0, 5, f"Mode: {order['service_mode']}", ln=True)
     pdf.cell(0, 5, f"Order Type: {order.get('order_type', 'Delivery')}", ln=True)
@@ -513,9 +514,16 @@ def generate_order_slip_pdf(order):
     pdf.cell(0, 5, f"Date: {order_date}", ln=True)
     pdf.cell(0, 4, "-" * 40, ln=True, align="C")
 
-    output = pdf.output()
-    # Handle both string and bytes output from FPDF
-    if isinstance(output, bytes):
-        return output
-    else:
-        return output.encode('latin-1') if isinstance(output, str) else bytes(output)
+    # Generate PDF and ensure we return bytes
+    try:
+        pdf_output = pdf.output()
+        if isinstance(pdf_output, bytes) and len(pdf_output) > 0:
+            return pdf_output
+        elif isinstance(pdf_output, str):
+            return pdf_output.encode('latin-1')
+        else:
+            # Fallback: try to get bytes directly
+            return pdf.output().encode('latin-1') if isinstance(pdf.output(), str) else bytes(pdf.output())
+    except Exception as e:
+        print(f"PDF generation error: {e}")
+        return b""
