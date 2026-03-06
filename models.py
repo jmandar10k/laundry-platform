@@ -455,7 +455,7 @@ def generate_order_slip_pdf(order):
         from fpdf import FPDF
         
         # Create PDF 
-        pdf = FPDF(orientation="P", unit="mm", format="A6")  # Small receipt format
+        pdf = FPDF(orientation="P", unit="mm", format="A4")
         pdf.add_page()
         pdf.set_margins(3, 3, 3)
         pdf.set_auto_page_break(auto=False)
