@@ -450,50 +450,59 @@ def get_delivery_metrics():
 # ── PDF Slip Generation ────────────────────────────────────────
 
 def generate_order_slip_pdf(order):
-    """Generate a small receipt-style PDF for an order."""
+    """Generate a simple receipt-style PDF for an order."""
     try:
         from fpdf import FPDF
-        from io import BytesIO
         
-        # Create a BytesIO buffer to capture PDF output
-        pdf_buffer = BytesIO()
-        
-        # Create PDF with proper settings
-        pdf = FPDF(unit="mm", format=(80, 200), orientation="P")
+        # Create PDF 
+        pdf = FPDF(orientation="P", unit="mm", format="A6")  # Small receipt format
         pdf.add_page()
-        pdf.set_margins(5, 5, 5)
+        pdf.set_margins(3, 3, 3)
         pdf.set_auto_page_break(auto=False)
         
+        # Ensure order is a dict
+        if not isinstance(order, dict):
+            return b""
+        
         # Title
-        pdf.set_font("Helvetica", "B", 14)
-        pdf.cell(0, 8, "SMART LAUNDRY", ln=True, align="C")
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 5, "SMART LAUNDRY", ln=True, align="C")
         
-        pdf.set_font("Helvetica", "", 8)
-        pdf.cell(0, 4, "-" * 40, ln=True, align="C")
-        pdf.ln(1)
+        pdf.set_font("Arial", "", 7)
+        pdf.cell(0, 2, "-" * 35, ln=True, align="C")
         
-        # Order details
-        pdf.set_font("Helvetica", "B", 8)
-        pdf.cell(0, 4, f"Order ID: {order.get('id', 'N/A')}", ln=True)
+        # Order ID
+        pdf.set_font("Arial", "B", 8)
+        order_id = str(order.get('id', 'N/A'))
+        pdf.cell(0, 4, f"Order: #{order_id}", ln=True)
         
-        pdf.set_font("Helvetica", "", 8)
-        pdf.cell(0, 4, f"Customer: {order.get('customer_name', 'N/A')}", ln=True)
-        pdf.cell(0, 4, f"Phone: {order.get('phone', 'N/A')}", ln=True)
-        pdf.cell(0, 4, f"Area: {order.get('delivery_area', 'N/A')}", ln=True)
-        pdf.cell(0, 4, f"Outlet: {order.get('outlet_name', 'N/A')}", ln=True)
-        pdf.ln(1)
+        # Customer
+        pdf.set_font("Arial", "", 7)
+        customer = str(order.get('customer_name', 'Customer'))
+        phone = str(order.get('phone', 'N/A'))
+        pdf.cell(0, 3, f"Name: {customer}", ln=True)
+        pdf.cell(0, 3, f"Phone: {phone}", ln=True)
         
-        pdf.cell(0, 4, f"Service: {order.get('service_type', 'N/A')}", ln=True)
-        pdf.cell(0, 4, f"Mode: {order.get('service_mode', 'N/A')}", ln=True)
-        pdf.cell(0, 4, f"Type: {order.get('order_type', 'Delivery')}", ln=True)
-        pdf.ln(1)
+        # Area and Outlet
+        area = str(order.get('delivery_area', 'N/A'))
+        outlet = str(order.get('outlet_name', 'N/A'))
+        pdf.cell(0, 3, f"Area: {area}", ln=True)
+        pdf.cell(0, 3, f"Outlet: {outlet}", ln=True)
         
-        # Items
-        pdf.set_font("Helvetica", "B", 8)
-        pdf.cell(0, 4, "Items:", ln=True)
-        pdf.set_font("Helvetica", "", 8)
+        # Service info
+        service = str(order.get('service_type', 'Standard'))
+        mode = str(order.get('service_mode', 'Regular'))
+        pdf.cell(0, 3, f"Service: {service}", ln=True)
+        pdf.cell(0, 3, f"Mode: {mode}", ln=True)
         
-        items_list = [
+        pdf.cell(0, 2, "-" * 35, ln=True, align="C")
+        
+        # Items breakdown
+        pdf.set_font("Arial", "B", 8)
+        pdf.cell(0, 3, "ITEMS:", ln=True)
+        
+        pdf.set_font("Arial", "", 7)
+        items_data = [
             ("Shirts", order.get("shirts", 0)),
             ("Jeans", order.get("jeans", 0)),
             ("Dresses", order.get("dresses", 0)),
@@ -501,47 +510,49 @@ def generate_order_slip_pdf(order):
             ("Others", order.get("others", 0)),
         ]
         
-        for item_name, qty in items_list:
+        total_items = 0
+        for item_name, qty in items_data:
+            qty = int(qty) if qty else 0
             if qty > 0:
-                pdf.cell(30, 4, f"  {item_name}:", ln=False)
-                pdf.cell(0, 4, f"x{qty}", ln=True)
+                pdf.cell(20, 2.5, f"{item_name}:", ln=False)
+                pdf.cell(0, 2.5, f"{qty}", ln=True)
+                total_items += qty
         
-        pdf.ln(1)
-        pdf.set_font("Helvetica", "B", 8)
-        pdf.cell(0, 4, f"Total: {order.get('items', 0)} items", ln=True)
+        pdf.cell(0, 2, "-" * 35, ln=True, align="C")
         
-        # Footer
-        pdf.ln(2)
-        pdf.set_font("Helvetica", "", 7)
+        # Total
+        pdf.set_font("Arial", "B", 8)
+        pdf.cell(0, 3, f"TOTAL: {total_items} items", ln=True)
         
-        order_date = order.get("created_at", "")
-        if order_date:
-            try:
-                dt = datetime.fromisoformat(str(order_date))
-                order_date = dt.strftime("%Y-%m-%d")
-            except:
-                order_date = str(order_date)[:10] if order_date else "N/A"
-        else:
-            order_date = "N/A"
+        # Date
+        pdf.set_font("Arial", "", 7)
+        try:
+            created = str(order.get('created_at', ''))
+            if created:
+                from datetime import datetime
+                dt = datetime.fromisoformat(created)
+                date_str = dt.strftime("%Y-%m-%d")
+            else:
+                date_str = "N/A"
+        except:
+            date_str = str(order.get('created_at', 'N/A'))[:10]
         
-        pdf.cell(0, 3, f"Date: {order_date}", ln=True, align="C")
-        pdf.cell(0, 3, "-" * 40, ln=True, align="C")
+        pdf.cell(0, 3, f"Date: {date_str}", ln=True, align="C")
+        pdf.cell(0, 2, "-" * 35, ln=True, align="C")
         
-        # Output PDF - handle different return types
+        # Get PDF as bytes
         pdf_output = pdf.output()
         
-        # Convert to bytes
+        # Handle different output types
         if isinstance(pdf_output, bytes):
             return pdf_output
         elif isinstance(pdf_output, bytearray):
             return bytes(pdf_output)
         elif isinstance(pdf_output, str):
             return pdf_output.encode('latin-1')
-        else:
-            return b""
+        
+        return b""
         
     except Exception as e:
-        print(f"⚠️ PDF Generation Error: {e}")
-        import traceback
-        traceback.print_exc()
+        print(f"PDF Error: {str(e)}")
         return b""
