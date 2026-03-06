@@ -578,7 +578,10 @@ def outlet_dashboard():
                                 if driver:
                                     st.info(f"🚚 Driver: {driver['driver_name']}")
                             else:
-                                st.success("Notified 📱")
+                                # Notification button for pickup orders
+                                if st.button("📱 Notify Customer", key=f"notify_{order['id']}", use_container_width=True):
+                                    st.success("Notification sent to customer! 📱")
+                                    print(f"Notification sent to customer for order #{order['id']}")
                     
                     # Second row with slip download
                     st.divider()
