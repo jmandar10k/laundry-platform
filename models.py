@@ -513,4 +513,9 @@ def generate_order_slip_pdf(order):
     pdf.cell(0, 5, f"Date: {order_date}", ln=True)
     pdf.cell(0, 4, "-" * 40, ln=True, align="C")
 
-    return bytes(pdf.output())
+    output = pdf.output()
+    # Handle both string and bytes output from FPDF
+    if isinstance(output, bytes):
+        return output
+    else:
+        return output.encode('latin-1') if isinstance(output, str) else bytes(output)
