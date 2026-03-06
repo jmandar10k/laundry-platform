@@ -10,20 +10,6 @@ import requests
 import urllib.parse
 import os
 
-# ── SMS Configuration (Twilio) ────────────────────────────────
-TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID', '')
-TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN', '')
-TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER', '')
-SMS_ENABLED = bool(TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_PHONE_NUMBER)
-
-if SMS_ENABLED:
-    try:
-        from twilio.rest import Client
-        twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-    except ImportError:
-        SMS_ENABLED = False
-        print("Warning: Twilio not installed. Install with: pip install twilio")
-
 # ── Outlet Helpers ──────────────────────────────────────────────
 
 def add_outlet(outlet_name, location, username, password):
@@ -267,108 +253,11 @@ def get_ready_orders_by_area():
 
 
 def update_order_status(order_id, new_status):
-    """Update the status of an order and trigger automated notification if Ready."""
+    """Update the status of an order."""
     conn = get_connection()
     conn.execute("UPDATE orders SET status = ? WHERE id = ?", (new_status, order_id))
     conn.commit()
     conn.close()
-    
-    if new_status == "Ready":
-        trigger_notification(order_id)
-
-
-def send_sms(phone_number, message):
-    """
-    Send SMS notification using Twilio.
-    Returns True if successful, False otherwise.
-    """
-    if not SMS_ENABLED:
-        print("⚠️  SMS not configured. Set Twilio credentials as environment variables.")
-        return False
-    
-    try:
-        phone = str(phone_number).strip()
-        if not phone.startswith('+'):
-            phone = '+91' + phone if len(phone) == 10 else '+' + phone
-        
-        message_obj = twilio_client.messages.create(
-            body=message,
-            from_=TWILIO_PHONE_NUMBER,
-            to=phone
-        )
-        
-        print(f"\n✅ SMS SENT via Twilio")
-        print(f"To: {phone}")
-        print(f"Message: {message}")
-        print(f"SID: {message_obj.sid}\n")
-        return True
-    except Exception as e:
-        print(f"❌ SMS Error: {e}")
-        return False
-
-
-def trigger_notification(order_id):
-    """
-    Automated notification trigger via SMS (Twilio) and ntfy.sh.
-    """
-    conn = get_connection()
-    order = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
-    if order:
-        order = dict(order)
-        msg = f"🧺 Smart Laundry: Your order #{order['id']} is READY for {order['order_type']}!"
-        
-        # Send SMS if enabled
-        sms_sent = False
-        if SMS_ENABLED and order['phone']:
-            sms_sent = send_sms(order['phone'], msg)
-        
-        # Send ntfy.sh notification (always available)
-        topic = str(order['phone']).strip().replace('+', '')
-        if not topic:
-            topic = f"smart_laundry_{order['id']}"
-        
-        try:
-            requests.post(f"https://ntfy.sh/{topic}", 
-                          data=msg.encode('utf-8'),
-                          headers={
-                              "Title": "Order Ready!",
-                              "Priority": "high",
-                              "Tags": "tada,laundry"
-                          })
-            
-            print(f"\n📲 Push Notification sent via ntfy.sh")
-        except Exception as e:
-            print(f"ntfy.sh Error: {e}")
-        
-        # Log result in notifications table
-        try:
-            conn.execute(
-                "INSERT INTO notifications (order_id, customer_name, phone, message) VALUES (?, ?, ?, ?)",
-                (order['id'], order['customer_name'], order['phone'], msg)
-            )
-            conn.commit()
-        except Exception as e:
-            print(f"Database log error: {e}")
-    conn.close()
-
-
-def get_notification_logs():
-    """Return the history of automated notifications."""
-    conn = get_connection()
-    rows = conn.execute("SELECT * FROM notifications ORDER BY sent_at DESC LIMIT 20").fetchall()
-    conn.close()
-    return [dict(row) for row in rows]
-
-
-def get_sms_config():
-    """Return current SMS configuration status."""
-    return {
-        "enabled": SMS_ENABLED,
-        "configured": bool(TWILIO_ACCOUNT_SID) and bool(TWILIO_AUTH_TOKEN) and bool(TWILIO_PHONE_NUMBER),
-        "account_sid_set": bool(TWILIO_ACCOUNT_SID),
-        "auth_token_set": bool(TWILIO_AUTH_TOKEN),
-        "phone_number": TWILIO_PHONE_NUMBER if SMS_ENABLED else "Not configured"
-    }
 
 
 # ── Batch Helpers ───────────────────────────────────────────────

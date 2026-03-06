@@ -1,13 +1,12 @@
 # 🧺 Smart Laundry Operations Platform
 
-A comprehensive web application for managing laundry operations with order management, driver assignment, SMS notifications, and analytics.
+A comprehensive web application for managing laundry operations with order management, driver assignment, and analytics.
 
 ## ✨ Features
 
 - **Multi-user System**: Owner, Outlet Manager, and Delivery Dashboard
 - **Order Management**: Complete order lifecycle from creation to delivery
 - **Driver Management**: Assign drivers to deliveries with real-time status updates
-- **SMS Notifications**: Automated customer notifications via Twilio
 - **Analytics Dashboard**: Visual reports and KPIs
 - **PDF Generation**: Order receipts and reports
 - **Dark Mode UI**: Modern, responsive interface
@@ -31,15 +30,12 @@ A comprehensive web application for managing laundry operations with order manag
    pip install -r requirements.txt
    ```
 
-3. **Set up environment variables**
+3. **Set up environment variables** (optional)
    ```bash
    # Copy the example file
    cp .env.example .env
 
-   # Edit .env with your Twilio credentials
-   # TWILIO_ACCOUNT_SID=your_sid_here
-   # TWILIO_AUTH_TOKEN=your_token_here
-   # TWILIO_PHONE_NUMBER=your_number_here
+   # Edit .env with any environment-specific variables as needed
    ```
 
 4. **Run the application**
@@ -57,18 +53,10 @@ The application uses SQLite with the following tables:
 - `outlets` - Store branches and login credentials
 - `orders` - Customer orders and status tracking
 - `drivers` - Delivery personnel information
-- `notifications` - SMS notification history
+- `notifications` - Notification history
 - `batches` - Processing batch management
 
 ## 🔧 Configuration
-
-### Environment Variables
-Create a `.env` file with:
-```
-TWILIO_ACCOUNT_SID=your_twilio_account_sid
-TWILIO_AUTH_TOKEN=your_twilio_auth_token
-TWILIO_PHONE_NUMBER=your_twilio_phone_number
-```
 
 ### Default Users
 - **Owner**: `admin` / `admin123`
@@ -118,8 +106,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 For issues or questions:
 - Check the [Issues](https://github.com/yourusername/laundry-platform/issues) page
-- Review the SMS setup guide in `SMS_SETUP_GUIDE.md`
 
 ---
 
-**Built with ❤️ using Streamlit, SQLite, and Twilio**
+**Built with ❤️ using Streamlit and SQLite**

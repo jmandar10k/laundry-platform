@@ -3,5 +3,4 @@ pandas>=2.0.0
 plotly>=5.15.0
 fpdf>=1.7.2
 requests>=2.31.0
-twilio>=8.10.0
 python-dotenv>=1.0.0
