@@ -1,0 +1,40 @@
+# Environment variables (contains sensitive API keys)
+.env
+.env.local
+.env.production
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+laundry.db
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Temporary files created during development
+database_export.json
+database_viewer.py
+db_explorer.py
+export_db.py
+view_database.py
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Streamlit secrets (if using streamlit secrets)
+.streamlit/secrets.toml
