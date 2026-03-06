@@ -577,6 +577,10 @@ def outlet_dashboard():
                                 driver = get_driver_by_id(order['driver_id'])
                                 if driver:
                                     st.info(f"🚚 Driver: {driver['driver_name']}")
+                                    # Notification button for delivery orders with assigned driver
+                                    if st.button("📱 Notify Customer", key=f"notify_{order['id']}", use_container_width=True):
+                                        st.success("Notification sent to customer! 📱")
+                                        print(f"Notification sent to customer for order #{order['id']}")
                             else:
                                 # Notification button for pickup orders
                                 if st.button("📱 Notify Customer", key=f"notify_{order['id']}", use_container_width=True):
