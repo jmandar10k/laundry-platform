@@ -451,79 +451,97 @@ def get_delivery_metrics():
 
 def generate_order_slip_pdf(order):
     """Generate a small receipt-style PDF for an order."""
-    from fpdf import FPDF
-
-    pdf = FPDF(unit="mm", format=(80, 160)) # Extra height for delivery area
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=False)
-
-    pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 7, "SMART LAUNDRY", ln=True, align="C")
-    pdf.set_font("Helvetica", "", 8)
-    pdf.cell(0, 4, "-" * 40, ln=True, align="C")
-    pdf.ln(2)
-
-    pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 5, f"Order ID: {order['id']}", ln=True)
-    pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 5, f"Customer: {order['customer_name']}", ln=True)
-    pdf.cell(0, 5, f"Phone: {order['phone']}", ln=True)
-    pdf.cell(0, 5, f"Area: {order['delivery_area']}", ln=True)
-    pdf.cell(0, 5, f"Outlet: {order['outlet_name']}", ln=True)
-    pdf.ln(2)
-
-    pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 5, f"Service: {order['service_type']}", ln=True)
-    pdf.cell(0, 5, f"Mode: {order['service_mode']}", ln=True)
-    pdf.cell(0, 5, f"Order Type: {order.get('order_type', 'Delivery')}", ln=True)
-    pdf.ln(2)
-
-    pdf.set_font("Helvetica", "B", 9)
-    pdf.cell(0, 5, "Items", ln=True)
-    pdf.set_font("Helvetica", "", 9)
-    pdf.cell(0, 4, "-" * 40, ln=True, align="C")
-
-    # Correct field names based on database schema
-    clothing_items = [
-        ("Shirts / T-Shirts", order.get("shirts", 0)),
-        ("Jeans / Pants", order.get("jeans", 0)),
-        ("Women Dresses", order.get("dresses", 0)),
-        ("Traditional Wear", order.get("traditional", 0)),
-        ("Others", order.get("others", 0)),
-    ]
-    for name, qty in clothing_items:
-        if qty > 0:
-            pdf.cell(50, 5, f"  {name}:", ln=False)
-            pdf.cell(0, 5, str(qty), ln=True)
-
-    pdf.cell(0, 4, "-" * 40, ln=True, align="C")
-    pdf.set_font("Helvetica", "B", 10)
-    pdf.cell(0, 5, f"Total Items: {order['items']}", ln=True)
-    pdf.ln(2)
-
-    pdf.set_font("Helvetica", "", 9)
-    order_date = order.get("created_at", "")
-    if order_date:
-        try:
-            dt = datetime.fromisoformat(order_date)
-            order_date = dt.strftime("%Y-%m-%d")
-        except Exception:
-            # Fix potential slicing error on non-string types
-            order_date_str = str(order_date)
-            order_date = order_date_str[:10]
-    pdf.cell(0, 5, f"Date: {order_date}", ln=True)
-    pdf.cell(0, 4, "-" * 40, ln=True, align="C")
-
-    # Generate PDF and ensure we return bytes
     try:
+        from fpdf import FPDF
+        from io import BytesIO
+        
+        # Create a BytesIO buffer to capture PDF output
+        pdf_buffer = BytesIO()
+        
+        # Create PDF with proper settings
+        pdf = FPDF(unit="mm", format=(80, 200), orientation="P")
+        pdf.add_page()
+        pdf.set_margins(5, 5, 5)
+        pdf.set_auto_page_break(auto=False)
+        
+        # Title
+        pdf.set_font("Helvetica", "B", 14)
+        pdf.cell(0, 8, "SMART LAUNDRY", ln=True, align="C")
+        
+        pdf.set_font("Helvetica", "", 8)
+        pdf.cell(0, 4, "-" * 40, ln=True, align="C")
+        pdf.ln(1)
+        
+        # Order details
+        pdf.set_font("Helvetica", "B", 8)
+        pdf.cell(0, 4, f"Order ID: {order.get('id', 'N/A')}", ln=True)
+        
+        pdf.set_font("Helvetica", "", 8)
+        pdf.cell(0, 4, f"Customer: {order.get('customer_name', 'N/A')}", ln=True)
+        pdf.cell(0, 4, f"Phone: {order.get('phone', 'N/A')}", ln=True)
+        pdf.cell(0, 4, f"Area: {order.get('delivery_area', 'N/A')}", ln=True)
+        pdf.cell(0, 4, f"Outlet: {order.get('outlet_name', 'N/A')}", ln=True)
+        pdf.ln(1)
+        
+        pdf.cell(0, 4, f"Service: {order.get('service_type', 'N/A')}", ln=True)
+        pdf.cell(0, 4, f"Mode: {order.get('service_mode', 'N/A')}", ln=True)
+        pdf.cell(0, 4, f"Type: {order.get('order_type', 'Delivery')}", ln=True)
+        pdf.ln(1)
+        
+        # Items
+        pdf.set_font("Helvetica", "B", 8)
+        pdf.cell(0, 4, "Items:", ln=True)
+        pdf.set_font("Helvetica", "", 8)
+        
+        items_list = [
+            ("Shirts", order.get("shirts", 0)),
+            ("Jeans", order.get("jeans", 0)),
+            ("Dresses", order.get("dresses", 0)),
+            ("Traditional", order.get("traditional", 0)),
+            ("Others", order.get("others", 0)),
+        ]
+        
+        for item_name, qty in items_list:
+            if qty > 0:
+                pdf.cell(30, 4, f"  {item_name}:", ln=False)
+                pdf.cell(0, 4, f"x{qty}", ln=True)
+        
+        pdf.ln(1)
+        pdf.set_font("Helvetica", "B", 8)
+        pdf.cell(0, 4, f"Total: {order.get('items', 0)} items", ln=True)
+        
+        # Footer
+        pdf.ln(2)
+        pdf.set_font("Helvetica", "", 7)
+        
+        order_date = order.get("created_at", "")
+        if order_date:
+            try:
+                dt = datetime.fromisoformat(str(order_date))
+                order_date = dt.strftime("%Y-%m-%d")
+            except:
+                order_date = str(order_date)[:10] if order_date else "N/A"
+        else:
+            order_date = "N/A"
+        
+        pdf.cell(0, 3, f"Date: {order_date}", ln=True, align="C")
+        pdf.cell(0, 3, "-" * 40, ln=True, align="C")
+        
+        # Output PDF - handle different return types
         pdf_output = pdf.output()
-        if isinstance(pdf_output, bytes) and len(pdf_output) > 0:
+        
+        # Convert to bytes
+        if isinstance(pdf_output, bytes):
             return pdf_output
+        elif isinstance(pdf_output, bytearray):
+            return bytes(pdf_output)
         elif isinstance(pdf_output, str):
             return pdf_output.encode('latin-1')
         else:
-            # Fallback: try to get bytes directly
-            return pdf.output().encode('latin-1') if isinstance(pdf.output(), str) else bytes(pdf.output())
+            return b""
+        
     except Exception as e:
-        print(f"PDF generation error: {e}")
+        print(f"⚠️ PDF Generation Error: {e}")
+        import traceback
+        traceback.print_exc()
         return b""
