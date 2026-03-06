@@ -450,58 +450,83 @@ def get_delivery_metrics():
 # ── PDF Slip Generation ────────────────────────────────────────
 
 def generate_order_slip_pdf(order):
-    """Generate a simple receipt-style PDF for an order."""
+    """Generate a thermal printer receipt-style PDF (80mm x 200mm)."""
     try:
         from fpdf import FPDF
+        from datetime import datetime
         
-        # Create PDF 
-        pdf = FPDF(orientation="P", unit="mm", format="A4")
+        # Create PDF with thermal printer dimensions (80mm width)
+        pdf = FPDF(orientation="P", unit="mm", format=(80, 200))
         pdf.add_page()
-        pdf.set_margins(3, 3, 3)
+        pdf.set_margins(2, 2, 2)
         pdf.set_auto_page_break(auto=False)
         
         # Ensure order is a dict
         if not isinstance(order, dict):
             return b""
         
-        # Title
-        pdf.set_font("Arial", "B", 12)
-        pdf.cell(0, 5, "SMART LAUNDRY", ln=True, align="C")
+        # Header - Company Name
+        pdf.set_font("Arial", "B", 14)
+        pdf.cell(0, 6, "SMART LAUNDRY", ln=True, align="C")
         
-        pdf.set_font("Arial", "", 7)
-        pdf.cell(0, 2, "-" * 35, ln=True, align="C")
+        # Divider
+        pdf.set_font("Arial", "", 8)
+        pdf.cell(0, 2, "=" * 32, ln=True, align="C")
         
-        # Order ID
-        pdf.set_font("Arial", "B", 8)
+        # Order Number
+        pdf.set_font("Arial", "B", 10)
         order_id = str(order.get('id', 'N/A'))
-        pdf.cell(0, 4, f"Order: #{order_id}", ln=True)
+        pdf.cell(0, 5, f"Order #{order_id}", ln=True, align="C")
         
-        # Customer
+        # Divider
+        pdf.set_font("Arial", "", 8)
+        pdf.cell(0, 2, "-" * 32, ln=True, align="C")
+        pdf.ln(1)
+        
+        # Customer Information
+        pdf.set_font("Arial", "B", 8)
+        pdf.cell(0, 3, "CUSTOMER INFO", ln=True)
         pdf.set_font("Arial", "", 7)
+        
         customer = str(order.get('customer_name', 'Customer'))
         phone = str(order.get('phone', 'N/A'))
-        pdf.cell(0, 3, f"Name: {customer}", ln=True)
-        pdf.cell(0, 3, f"Phone: {phone}", ln=True)
-        
-        # Area and Outlet
         area = str(order.get('delivery_area', 'N/A'))
         outlet = str(order.get('outlet_name', 'N/A'))
-        pdf.cell(0, 3, f"Area: {area}", ln=True)
-        pdf.cell(0, 3, f"Outlet: {outlet}", ln=True)
         
-        # Service info
+        pdf.cell(25, 3, "Name:", ln=False)
+        pdf.cell(0, 3, customer, ln=True)
+        pdf.cell(25, 3, "Phone:", ln=False)
+        pdf.cell(0, 3, phone, ln=True)
+        pdf.cell(25, 3, "Area:", ln=False)
+        pdf.cell(0, 3, area, ln=True)
+        pdf.cell(25, 3, "Outlet:", ln=False)
+        pdf.cell(0, 3, outlet, ln=True)
+        
+        pdf.ln(1)
+        
+        # Service Details
+        pdf.set_font("Arial", "B", 8)
+        pdf.cell(0, 3, "SERVICE DETAILS", ln=True)
+        pdf.set_font("Arial", "", 7)
+        
         service = str(order.get('service_type', 'Standard'))
         mode = str(order.get('service_mode', 'Regular'))
-        pdf.cell(0, 3, f"Service: {service}", ln=True)
-        pdf.cell(0, 3, f"Mode: {mode}", ln=True)
+        order_type = str(order.get('order_type', 'Delivery'))
         
-        pdf.cell(0, 2, "-" * 35, ln=True, align="C")
+        pdf.cell(25, 3, "Type:", ln=False)
+        pdf.cell(0, 3, service, ln=True)
+        pdf.cell(25, 3, "Mode:", ln=False)
+        pdf.cell(0, 3, mode, ln=True)
+        pdf.cell(25, 3, "Order:", ln=False)
+        pdf.cell(0, 3, order_type, ln=True)
         
-        # Items breakdown
+        pdf.ln(1)
+        
+        # Items Breakdown
         pdf.set_font("Arial", "B", 8)
-        pdf.cell(0, 3, "ITEMS:", ln=True)
-        
+        pdf.cell(0, 3, "ITEMS BREAKDOWN", ln=True)
         pdf.set_font("Arial", "", 7)
+        
         items_data = [
             ("Shirts", order.get("shirts", 0)),
             ("Jeans", order.get("jeans", 0)),
@@ -513,32 +538,47 @@ def generate_order_slip_pdf(order):
         total_items = 0
         for item_name, qty in items_data:
             qty = int(qty) if qty else 0
-            if qty > 0:
-                pdf.cell(20, 2.5, f"{item_name}:", ln=False)
-                pdf.cell(0, 2.5, f"{qty}", ln=True)
-                total_items += qty
+            total_items += qty
+            pdf.cell(35, 3, f"{item_name}:", ln=False)
+            pdf.cell(0, 3, f"x{qty}", ln=True, align="R")
         
-        pdf.cell(0, 2, "-" * 35, ln=True, align="C")
+        # Divider
+        pdf.set_font("Arial", "", 8)
+        pdf.cell(0, 2, "=" * 32, ln=True, align="C")
         
-        # Total
-        pdf.set_font("Arial", "B", 8)
-        pdf.cell(0, 3, f"TOTAL: {total_items} items", ln=True)
+        # Total Summary
+        pdf.set_font("Arial", "B", 10)
+        pdf.cell(35, 4, "TOTAL:", ln=False)
+        pdf.cell(0, 4, f"{total_items} items", ln=True, align="R")
         
-        # Date
-        pdf.set_font("Arial", "", 7)
+        # Divider
+        pdf.set_font("Arial", "", 8)
+        pdf.cell(0, 2, "-" * 32, ln=True, align="C")
+        pdf.ln(1)
+        
+        # Footer - Date and time
+        pdf.set_font("Arial", "", 6)
         try:
             created = str(order.get('created_at', ''))
             if created:
-                from datetime import datetime
                 dt = datetime.fromisoformat(created)
-                date_str = dt.strftime("%Y-%m-%d")
+                date_str = dt.strftime("%Y-%m-%d %H:%M")
             else:
                 date_str = "N/A"
         except:
             date_str = str(order.get('created_at', 'N/A'))[:10]
         
-        pdf.cell(0, 3, f"Date: {date_str}", ln=True, align="C")
-        pdf.cell(0, 2, "-" * 35, ln=True, align="C")
+        pdf.cell(0, 2, date_str, ln=True, align="C")
+        
+        # Thank you message
+        pdf.ln(1)
+        pdf.set_font("Arial", "B", 8)
+        pdf.cell(0, 3, "Thank You!", ln=True, align="C")
+        pdf.cell(0, 3, "Visit Again", ln=True, align="C")
+        
+        # Bottom divider
+        pdf.set_font("Arial", "", 8)
+        pdf.cell(0, 2, "=" * 32, ln=True, align="C")
         
         # Get PDF as bytes
         pdf_output = pdf.output()
